@@ -46,7 +46,8 @@ pub type ParsedData = StyledText;
 #[derive(Debug, Clone, PartialEq, derive_more::FromStr)]
 pub enum OutputType {
     Terminal,
-    Html,
+    HtmlFragment,
+    HtmlStandalone,
 }
 
 static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").unwrap());
