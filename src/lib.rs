@@ -28,7 +28,18 @@ pub struct Segment {
     pub style: Style,
 }
 
-pub type ParsedData = Vec<Segment>;
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StyledText {
+    pub segments: Vec<Segment>,
+}
+
+impl StyledText {
+    pub fn segments(&self) -> &[Segment] {
+        &self.segments
+    }
+}
+
+pub type ParsedData = StyledText;
 
 static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").unwrap());
 
@@ -87,36 +98,56 @@ pub fn parse_ansi(input: &str) -> ParsedData {
                 38 => {
                     // Extended foreground color
                     i += 1;
-                    if i >= params.len() { break; }
+                    if i >= params.len() {
+                        break;
+                    }
                     let sub = params[i];
                     if sub == 5 {
                         // 256 color
                         i += 1;
-                        if i >= params.len() { break; }
+                        if i >= params.len() {
+                            break;
+                        }
                         current_style.fg_color = Some(Color::Indexed(params[i] as u8));
                     } else if sub == 2 {
                         // Truecolor
                         i += 1;
-                        if i + 2 >= params.len() { break; }
-                        current_style.fg_color = Some(Color::Rgb(params[i] as u8, params[i + 1] as u8, params[i + 2] as u8));
+                        if i + 2 >= params.len() {
+                            break;
+                        }
+                        current_style.fg_color = Some(Color::Rgb(
+                            params[i] as u8,
+                            params[i + 1] as u8,
+                            params[i + 2] as u8,
+                        ));
                         i += 2;
                     }
                 }
                 48 => {
                     // Extended background color
                     i += 1;
-                    if i >= params.len() { break; }
+                    if i >= params.len() {
+                        break;
+                    }
                     let sub = params[i];
                     if sub == 5 {
                         // 256 color
                         i += 1;
-                        if i >= params.len() { break; }
+                        if i >= params.len() {
+                            break;
+                        }
                         current_style.bg_color = Some(Color::Indexed(params[i] as u8));
                     } else if sub == 2 {
                         // Truecolor
                         i += 1;
-                        if i + 2 >= params.len() { break; }
-                        current_style.bg_color = Some(Color::Rgb(params[i] as u8, params[i + 1] as u8, params[i + 2] as u8));
+                        if i + 2 >= params.len() {
+                            break;
+                        }
+                        current_style.bg_color = Some(Color::Rgb(
+                            params[i] as u8,
+                            params[i + 1] as u8,
+                            params[i + 2] as u8,
+                        ));
                         i += 2;
                     }
                 }
@@ -137,88 +168,159 @@ pub fn parse_ansi(input: &str) -> ParsedData {
         });
     }
 
-    segments
+    StyledText { segments }
 }
 
-pub fn to_html(segments: &ParsedData) -> String {
-    let mut html = String::from(
-        "<html><head><meta charset=\"utf-8\"><style>pre { white-space: pre-wrap; } .bold { font-weight: bold; } .underline { text-decoration: underline; }</style></head><body><pre>",
-    );
-    for segment in segments {
-        let style = get_inline_style(&segment.style);
-        let classes = get_classes(&segment.style);
-        let class_attr = if classes.is_empty() {
-            String::new()
-        } else {
-            format!(" class=\"{}\"", classes.join(" "))
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_basic_fg_color() {
+        let input = "\x1b[31mRed\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Red".to_string(),
+                style: Style {
+                    fg_color: Some(Color::Indexed(1)),
+                    ..Default::default()
+                },
+            }],
         };
-        let style_attr = if style.is_empty() {
-            String::new()
-        } else {
-            format!(" style=\"{}\"", style)
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_basic_bg_color() {
+        let input = "\x1b[41mRed BG\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Red BG".to_string(),
+                style: Style {
+                    bg_color: Some(Color::Indexed(1)),
+                    ..Default::default()
+                },
+            }],
         };
-        html.push_str(&format!(
-            "<span{}{}>{}</span>",
-            class_attr,
-            style_attr,
-            escape_html(&segment.text)
-        ));
+        assert_eq!(result, expected);
     }
-    html.push_str("</pre></body></html>");
-    html
-}
 
-fn get_classes(style: &Style) -> Vec<&'static str> {
-    let mut classes = Vec::new();
-    if style.bold {
-        classes.push("bold");
+    #[test]
+    fn test_basic_fg_bg_color() {
+        let input = "\x1b[32;44mGreen on Blue\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Green on Blue".to_string(),
+                style: Style {
+                    fg_color: Some(Color::Indexed(2)),
+                    bg_color: Some(Color::Indexed(4)),
+                    ..Default::default()
+                },
+            }],
+        };
+        assert_eq!(result, expected);
     }
-    if style.underline {
-        classes.push("underline");
-    }
-    // add more if needed
-    classes
-}
 
-fn get_inline_style(style: &Style) -> String {
-    let mut styles = Vec::new();
-    if let Some(color) = &style.fg_color {
-        styles.push(format!("color: {}", color_to_css(color)));
+    #[test]
+    fn test_terminal_styles() {
+        let input = "\x1b[1;3;4mBold Italic Underline\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Bold Italic Underline".to_string(),
+                style: Style {
+                    bold: true,
+                    italic: true,
+                    underline: true,
+                    ..Default::default()
+                },
+            }],
+        };
+        assert_eq!(result, expected);
     }
-    if let Some(color) = &style.bg_color {
-        styles.push(format!("background-color: {}", color_to_css(color)));
-    }
-    styles.join("; ")
-}
 
-fn color_to_css(color: &Color) -> String {
-    match color {
-        Color::Rgb(r, g, b) => format!("rgb({},{},{})", r, g, b),
-        Color::Indexed(i) => {
-            // Basic 16 colors, for simplicity
-            match i {
-                0 => "rgb(0,0,0)".to_string(),
-                1 => "rgb(128,0,0)".to_string(),
-                2 => "rgb(0,128,0)".to_string(),
-                3 => "rgb(128,128,0)".to_string(),
-                4 => "rgb(0,0,128)".to_string(),
-                5 => "rgb(128,0,128)".to_string(),
-                6 => "rgb(0,128,128)".to_string(),
-                7 => "rgb(192,192,192)".to_string(),
-                8 => "rgb(128,128,128)".to_string(),
-                9 => "rgb(255,0,0)".to_string(),
-                10 => "rgb(0,255,0)".to_string(),
-                11 => "rgb(255,255,0)".to_string(),
-                12 => "rgb(0,0,255)".to_string(),
-                13 => "rgb(255,0,255)".to_string(),
-                14 => "rgb(0,255,255)".to_string(),
-                15 => "rgb(255,255,255)".to_string(),
-                _ => "rgb(0,0,0)".to_string(), // default
-            }
-        }
+    #[test]
+    fn test_indexed_fg_color() {
+        let input = "\x1b[38;5;196mBright Red\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Bright Red".to_string(),
+                style: Style {
+                    fg_color: Some(Color::Indexed(196)),
+                    ..Default::default()
+                },
+            }],
+        };
+        assert_eq!(result, expected);
     }
-}
 
-fn escape_html(s: &str) -> String {
-    s.replace("&", "&").replace("<", "<").replace(">", ">")
+    #[test]
+    fn test_indexed_bg_color() {
+        let input = "\x1b[48;5;200mMagenta BG\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Magenta BG".to_string(),
+                style: Style {
+                    bg_color: Some(Color::Indexed(200)),
+                    ..Default::default()
+                },
+            }],
+        };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_true_color_fg() {
+        let input = "\x1b[38;2;255;0;0mTrue Red\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "True Red".to_string(),
+                style: Style {
+                    fg_color: Some(Color::Rgb(255, 0, 0)),
+                    ..Default::default()
+                },
+            }],
+        };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_true_color_bg() {
+        let input = "\x1b[48;2;0;255;128mCyan BG\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Cyan BG".to_string(),
+                style: Style {
+                    bg_color: Some(Color::Rgb(0, 255, 128)),
+                    ..Default::default()
+                },
+            }],
+        };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_mixed_styles_and_colors() {
+        let input = "\x1b[1;38;2;255;165;0;48;5;0mOrange on Black\x1b[0m";
+        let result = parse_ansi(input);
+        let expected = StyledText {
+            segments: vec![Segment {
+                text: "Orange on Black".to_string(),
+                style: Style {
+                    bold: true,
+                    fg_color: Some(Color::Rgb(255, 165, 0)),
+                    bg_color: Some(Color::Indexed(0)),
+                    ..Default::default()
+                },
+            }],
+        };
+        assert_eq!(result, expected);
+    }
 }
