@@ -1,0 +1,29 @@
+[package]
+name = "fromansi"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+name = "fromansi"
+
+[dependencies]
+bon = "3.8.1"
+clap = { version = "4.5.51", features = ["derive", "env"] }
+regex = "1.10.6"
+clap-verbosity-flag = { version = "3.0.4", default-features = false, features = [ "tracing" ] }
+cucumber = "0.22.1"
+derive_more = { version = "2.0.1", features = ["display", "from", "full"] }
+dotenvy = { version = "0.15.7", features = ["clap", "cli"] }
+error-stack = { version = "0.6.0", features = ["hooks", "spantrace"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+smart-default = "0.7.1"
+strum = { version = "0.27.2", features = ["derive"] }
+tap = "1.0.1"
+tracing = "0.1.43"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+wherror = "2"
+
+[dev-dependencies]
+rstest = "0.26.1"
