@@ -61,7 +61,7 @@ impl StyledText {
 
             if let Some(color) = fg_color {
                 if let Some(idx) = color.to_indexed_if_possible() {
-                    classes.push(format!("fg-{}", idx));
+                    classes.push(format!("fg{}", idx));
                 } else {
                     match color {
                         Color::Indexed(_) => unreachable!(), // since to_indexed_if_possible would return Some
@@ -74,7 +74,7 @@ impl StyledText {
 
             if let Some(color) = bg_color {
                 if let Some(idx) = color.to_indexed_if_possible() {
-                    classes.push(format!("bg-{}", idx));
+                    classes.push(format!("bg{}", idx));
                 } else {
                     match color {
                         Color::Indexed(_) => unreachable!(),
@@ -180,7 +180,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<pre><span class=\"fg-1\">Red Text</span></pre>");
+        assert_eq!(html, "<pre><span class=\"fg1\">Red Text</span></pre>");
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<pre><span class=\"bg-4\">Blue BG</span></pre>");
+        assert_eq!(html, "<pre><span class=\"bg4\">Blue BG</span></pre>");
     }
 
     #[test]
@@ -283,7 +283,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<pre><span class=\"fg-7 bg-1\">Reversed</span></pre>");
+        assert_eq!(html, "<pre><span class=\"fg7 bg1\">Reversed</span></pre>");
     }
 
     #[test]
@@ -408,7 +408,7 @@ mod tests {
         let html = styled_text.to_html();
         assert_eq!(
             html,
-            "<pre><span>Normal text   with spaces</span><span class=\"bold\">Bold    text</span><span class=\"fg-1\">\nRed     text</span><span class=\"underline\">   Underlined</span></pre>"
+            "<pre><span>Normal text   with spaces</span><span class=\"bold\">Bold    text</span><span class=\"fg1\">\nRed     text</span><span class=\"underline\">   Underlined</span></pre>"
         );
     }
 
@@ -485,7 +485,7 @@ mod tests {
         let html = styled_text.to_html_with_filter(Some("#000000"));
         assert_eq!(
             html,
-            "<pre><span>Data</span><span class=\"fg-0\">XXX</span><span>More</span></pre>"
+            "<pre><span>Data</span><span class=\"fg0\">XXX</span><span>More</span></pre>"
         );
     }
 }

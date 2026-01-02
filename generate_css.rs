@@ -19,8 +19,8 @@ fn main() {
     ];
 
     for i in 0..16 {
-        println!(".fg-{} {{ color: {}; }}", i, standard_colors[i]);
-        println!(".bg-{} {{ background-color: {}; }}", i, standard_colors[i]);
+        println!(".fg{} {{ color: {}; }}", i, standard_colors[i]);
+        println!(".bg{} {{ background-color: {}; }}", i, standard_colors[i]);
     }
 
     // Color cube 16-231
@@ -29,15 +29,15 @@ fn main() {
         let g = (((i - 16) % 36) / 6) * 51;
         let b = ((i - 16) % 6) * 51;
         let hex = format!("#{:02x}{:02x}{:02x}", r, g, b);
-        println!(".fg-{} {{ color: {}; }}", i, hex);
-        println!(".bg-{} {{ background-color: {}; }}", i, hex);
+        println!(".fg{} {{ color: {}; }}", i, hex);
+        println!(".bg{} {{ background-color: {}; }}", i, hex);
     }
 
     // Grayscale 232-255
     for i in 232..256 {
         let gray = 8 + (i - 232) * 10;
         let hex = format!("#{:02x}{:02x}{:02x}", gray, gray, gray);
-        println!(".fg-{} {{ color: {}; }}", i, hex);
-        println!(".bg-{} {{ background-color: {}; }}", i, hex);
+        println!(".fg{} {{ color: {}; }}", i, hex);
+        println!(".bg{} {{ background-color: {}; }}", i, hex);
     }
 }
