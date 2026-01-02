@@ -14,6 +14,10 @@ struct Args {
     /// Output type
     #[arg(short, long, default_value = "terminal")]
     output: OutputType,
+
+    /// Generate standalone HTML with inline CSS
+    #[arg(long)]
+    standalone_html: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,7 +41,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         OutputType::Html => {
             let parsed = parse_ansi(&input);
-            println!("{}", parsed.to_html());
+            let html = parsed.to_html();
+            if args.standalone_html {
+                let css = fs::read_to_string("static/styles.css")?;
+                let full_html = format!("<!DOCTYPE html><html><head><style>{}</style></head><body>{}</body></html>", css, html);
+                println!("{}", full_html);
+            } else {
+                println!("{}", html);
+            }
         }
     }
 
