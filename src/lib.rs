@@ -7,13 +7,23 @@ use std::sync::LazyLock;
 
 mod renderers;
 
+/// Represents a color in ANSI escape sequences.
+///
+/// This enum supports both indexed colors (0-255) from the standard ANSI palette
+/// and truecolor RGB values.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Color {
+    /// An indexed color from the 256-color ANSI palette.
     Indexed(u8),
+    /// A truecolor RGB color.
     Rgb(u8, u8, u8),
 }
 
 impl Color {
+    /// Converts the color to its hexadecimal string representation.
+    ///
+    /// For indexed colors, this returns the corresponding hex value from the ANSI palette.
+    /// For RGB colors, this formats the values as `#RRGGBB`.
     #[must_use]
     pub fn to_hex(&self) -> String {
         match self {
@@ -40,6 +50,10 @@ impl Color {
         }
     }
 
+    /// Attempts to convert the color to an indexed color if it matches a palette entry.
+    ///
+    /// This method checks if the color's hex representation matches any of the 256
+    /// standard ANSI colors. If a match is found, returns the index; otherwise, returns None.
     #[must_use]
     pub fn to_indexed_if_possible(&self) -> Option<u8> {
         let hex = self.to_hex();
@@ -47,38 +61,68 @@ impl Color {
     }
 }
 
+/// Represents text styling attributes for ANSI escape sequences.
+///
+/// This struct contains all the formatting options that can be applied to text,
+/// including colors, font styles, and visibility settings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Style {
+    /// Foreground color of the text.
     pub fg_color: Option<Color>,
+    /// Background color of the text.
     pub bg_color: Option<Color>,
+    /// Whether the text should be bold.
     pub bold: bool,
+    /// Whether the text should be dimmed.
     pub dim: bool,
+    /// Whether the text should be italic.
     pub italic: bool,
+    /// Whether the text should be underlined.
     pub underline: bool,
+    /// Whether the text should blink.
     pub blink: bool,
+    /// Whether foreground and background colors should be reversed.
     pub reverse: bool,
+    /// Whether the text should be hidden.
     pub hidden: bool,
+    /// Whether the text should have a strikethrough.
     pub strikethrough: bool,
 }
 
+/// Represents a segment of text with associated styling.
+///
+/// A segment is a contiguous piece of text that shares the same styling attributes.
+/// Styled text is composed of multiple segments, each with its own style.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Segment {
+    /// The text content of this segment.
     pub text: String,
+    /// The styling attributes applied to this text.
     pub style: Style,
 }
 
+/// A collection of styled text segments.
+///
+/// This struct represents text that has been parsed from ANSI escape sequences,
+/// broken down into segments where each segment has consistent styling.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StyledText {
+    /// The list of text segments with their associated styles.
     pub segments: Vec<Segment>,
 }
 
 impl StyledText {
+    /// Returns a reference to the list of text segments.
     #[must_use]
     pub fn segments(&self) -> &[Segment] {
         &self.segments
     }
 
+    /// Splits the styled text into individual lines.
+    ///
+    /// This method processes the segments and splits them at newline characters,
+    /// preserving the styling for each line.
     #[must_use]
     pub fn split_lines(&self) -> Vec<StyledText> {
         let mut lines = Vec::new();
@@ -111,17 +155,20 @@ impl StyledText {
     }
 }
 
+/// Type alias for styled text parsed from ANSI escape sequences.
+///
+/// This represents the result of parsing ANSI-formatted text into structured segments.
 pub type ParsedData = StyledText;
 
 static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").unwrap());
 
-    /// Parses ANSI escape sequences from the input string into styled text.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the regex capture fails unexpectedly.
-    #[allow(clippy::too_many_lines)]
-    pub fn parse_ansi(input: &str) -> ParsedData {
+/// Parses ANSI escape sequences from the input string into styled text.
+///
+/// # Panics
+///
+/// Panics if the regex capture fails unexpectedly.
+#[allow(clippy::too_many_lines)]
+pub fn parse_ansi(input: &str) -> ParsedData {
     let mut segments = Vec::new();
     let mut current_style = Style::default();
     let mut last_end = 0;
@@ -169,10 +216,18 @@ static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]
                 27 => current_style.reverse = false,
                 28 => current_style.hidden = false,
                 29 => current_style.strikethrough = false,
-                30..=37 => current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 30).unwrap())),
-                40..=47 => current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 40).unwrap())),
-                90..=97 => current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 82).unwrap())), // bright
-                100..=107 => current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 92).unwrap())), // bright
+                30..=37 => {
+                    current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 30).unwrap()))
+                }
+                40..=47 => {
+                    current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 40).unwrap()))
+                }
+                90..=97 => {
+                    current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 82).unwrap()))
+                } // bright
+                100..=107 => {
+                    current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 92).unwrap()))
+                } // bright
                 38 => {
                     // Extended foreground color
                     i += 1;
@@ -186,7 +241,8 @@ static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]
                         if i >= params.len() {
                             break;
                         }
-                        current_style.fg_color = Some(Color::Indexed(u8::try_from(params[i]).unwrap()));
+                        current_style.fg_color =
+                            Some(Color::Indexed(u8::try_from(params[i]).unwrap()));
                     } else if sub == 2 {
                         // Truecolor
                         i += 1;
@@ -214,7 +270,8 @@ static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]
                         if i >= params.len() {
                             break;
                         }
-                        current_style.bg_color = Some(Color::Indexed(u8::try_from(params[i]).unwrap()));
+                        current_style.bg_color =
+                            Some(Color::Indexed(u8::try_from(params[i]).unwrap()));
                     } else if sub == 2 {
                         // Truecolor
                         i += 1;
@@ -249,16 +306,16 @@ static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]
     StyledText { segments }
 }
 
-    /// Converts `RexPaint` file data to ANSI text.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the `RexPaint` data is invalid or cannot be read.
-    ///
-    /// # Panics
-    ///
-    /// Panics if accessing a cell in the layer fails (invalid dimensions).
-    pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+/// Converts `RexPaint` file data to ANSI text.
+///
+/// # Errors
+///
+/// Returns an error if the `RexPaint` data is invalid or cannot be read.
+///
+/// # Panics
+///
+/// Panics if accessing a cell in the layer fails (invalid dimensions).
+pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
     use std::io::Cursor;
     let mut f = Cursor::new(data);
     let xp = XpFile::read(&mut f)?;
@@ -274,9 +331,19 @@ static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]
                     ' '
                 };
                 if cell.bg.is_transparent() {
-                    write!(&mut output, "\x1b[38;2;{};{};{}m{}\x1b[0m", cell.fg.r, cell.fg.g, cell.fg.b, ch).unwrap();
+                    write!(
+                        &mut output,
+                        "\x1b[38;2;{};{};{}m{}\x1b[0m",
+                        cell.fg.r, cell.fg.g, cell.fg.b, ch
+                    )
+                    .unwrap();
                 } else {
-                    write!(&mut output, "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m", cell.fg.r, cell.fg.g, cell.fg.b, cell.bg.r, cell.bg.g, cell.bg.b, ch).unwrap();
+                    write!(
+                        &mut output,
+                        "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m",
+                        cell.fg.r, cell.fg.g, cell.fg.b, cell.bg.r, cell.bg.g, cell.bg.b, ch
+                    )
+                    .unwrap();
                 }
             }
             output.push('\n');
@@ -285,6 +352,10 @@ static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]
     Ok(output)
 }
 
+/// Generates CSS styles for HTML output of ANSI-formatted text.
+///
+/// This function creates CSS rules for all supported ANSI colors and text styles,
+/// including standard 16 colors, 256-color palette, and grayscale colors.
 #[must_use]
 pub fn generate_css() -> String {
     let mut css = String::new();
@@ -313,7 +384,12 @@ pub fn generate_css() -> String {
 
     (0..16).for_each(|i| {
         writeln!(&mut css, ".fg{i} {{ color: {} }}", standard_colors[i]).unwrap();
-        writeln!(&mut css, ".bg{i} {{ background-color: {} }}", standard_colors[i]).unwrap();
+        writeln!(
+            &mut css,
+            ".bg{i} {{ background-color: {} }}",
+            standard_colors[i]
+        )
+        .unwrap();
     });
     css.push('\n');
 

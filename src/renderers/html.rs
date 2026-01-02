@@ -2,12 +2,26 @@ use crate::{Color, StyledText};
 use std::fmt::Write;
 
 impl StyledText {
+    /// Converts the styled text to HTML format.
+    ///
+    /// This is a convenience method that calls `to_html_with_filter` with no filter, returning a
+    /// string containing the HTML representation wrapped in a `<pre>` tag.
     #[must_use]
     pub fn to_html(&self) -> String {
         self.to_html_with_filter(None)
     }
 
-    /// Converts the styled text to HTML format with optional filtering.
+    /// Converts the styled text to HTML format with optional color filtering.
+    ///
+    /// Returns a string containing the HTML representation wrapped in a `<pre>` tag.
+    ///
+    /// When a filter hex color is provided, segments with spaces that match the filter
+    /// color are replaced with `&nbsp;` entities and their styling is removed. This is
+    /// useful for hiding background colors in terminal output.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter_hex` - Optional hex color string (e.g., "#000000") to filter out
     ///
     /// # Panics
     ///
