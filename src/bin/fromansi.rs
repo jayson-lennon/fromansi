@@ -42,14 +42,49 @@ enum Commands {
     Css,
 }
 
+/// The output type for HTML rendering.
 #[derive(Clone, ValueEnum)]
 enum HtmlOutputType {
+    /// Just the <pre> block.
     Fragment,
+    /// An entire webpage
     Standalone,
 }
+
+/// Top-level application error
 #[derive(Debug, Error)]
 #[error(debug)]
 pub struct AppError;
+
+fn read_text_input(input: Option<PathBuf>) -> Result<String, Report<AppError>> {
+    if let Some(input_path) = input {
+        fs::read_to_string(&input_path)
+            .change_context(AppError)
+            .attach_with(|| format!("failed to read input file '{}'", input_path.display()))
+    } else {
+        let mut buffer = String::new();
+        io::stdin()
+            .read_to_string(&mut buffer)
+            .change_context(AppError)
+            .attach("failed to read stdin")?;
+        Ok(buffer)
+    }
+}
+
+fn read_binary_input(input: Option<PathBuf>) -> Result<Vec<u8>, Report<AppError>> {
+    if let Some(input_path) = input {
+        fs::read(&input_path)
+            .change_context(AppError)
+            .attach_with(|| format!("failed to read input file '{}'", input_path.display()))
+    } else {
+        let mut buffer = Vec::new();
+        io::stdin()
+            .read_to_end(&mut buffer)
+            .change_context(AppError)
+            .attach("failed to read stdin")?;
+        Ok(buffer)
+    }
+}
 
 fn main() -> Result<(), Report<AppError>> {
     let args = Args::parse();
@@ -58,22 +93,7 @@ fn main() -> Result<(), Report<AppError>> {
     // Handle output
     match args.command {
         None => {
-            // Read input
-            let input = if let Some(input_path) = &args.input {
-                fs::read_to_string(input_path)
-                    .change_context(AppError)
-                    .attach_with(|| {
-                        format!("failed to read input file '{}'", input_path.display())
-                    })?
-            } else {
-                let mut buffer = String::new();
-                io::stdin()
-                    .read_to_string(&mut buffer)
-                    .change_context(AppError)
-                    .attach("failed to read stdin")?;
-                buffer
-            };
-            // Terminal output
+            let input = read_text_input(args.input)?;
             print!("{input}");
         }
         Some(Commands::Html {
@@ -81,21 +101,7 @@ fn main() -> Result<(), Report<AppError>> {
             output,
             filter,
         }) => {
-            // Read input
-            let input = if let Some(input_path) = &input {
-                fs::read_to_string(input_path)
-                    .change_context(AppError)
-                    .attach_with(|| {
-                        format!("failed to read input file '{}'", input_path.display())
-                    })?
-            } else {
-                let mut buffer = String::new();
-                io::stdin()
-                    .read_to_string(&mut buffer)
-                    .change_context(AppError)
-                    .attach("failed to read stdin")?;
-                buffer
-            };
+            let input = read_text_input(input)?;
             let parsed = parse_ansi(&input);
             let html = parsed.to_html_with_filter(filter.as_deref());
             match output {
@@ -112,21 +118,7 @@ fn main() -> Result<(), Report<AppError>> {
             }
         }
         Some(Commands::Rex { input }) => {
-            // Read RexPaint data
-            let data = if let Some(input_path) = &input {
-                fs::read(input_path)
-                    .change_context(AppError)
-                    .attach_with(|| {
-                        format!("failed to read input file '{}'", input_path.display())
-                    })?
-            } else {
-                let mut buffer = Vec::new();
-                io::stdin()
-                    .read_to_end(&mut buffer)
-                    .change_context(AppError)
-                    .attach("failed to read stdin")?;
-                buffer
-            };
+            let data = read_binary_input(input)?;
             let ansi = rexpaint_to_ansi(&data)
                 .change_context(AppError)
                 .attach("RexPaint conversion failed")?;
