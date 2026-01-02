@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
@@ -43,10 +44,14 @@ impl StyledText {
 
 pub type ParsedData = StyledText;
 
-#[derive(Debug, Clone, PartialEq, derive_more::FromStr)]
+/// The rendered output type.
+#[derive(Debug, Clone, PartialEq, derive_more::FromStr, ValueEnum)]
 pub enum OutputType {
+    /// Output back to the terminal.
     Terminal,
+    /// Output a <pre> HTML block
     HtmlFragment,
+    /// Output a standalone HTML page
     HtmlStandalone,
 }
 
