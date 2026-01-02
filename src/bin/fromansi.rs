@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use fromansi::{parse_ansi, generate_css};
+use fromansi::{generate_css, parse_ansi, rexpaint_to_ansi};
 use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -30,6 +30,11 @@ enum Commands {
         #[arg(long)]
         filter: Option<String>,
     },
+    /// Convert RexPaint file to ANSI text
+    Rex {
+        /// Input file (reads from stdin if not provided)
+        input: Option<PathBuf>,
+    },
     /// Generate CSS styles
     Css,
 }
@@ -57,7 +62,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Terminal output
             print!("{}", input);
         }
-        Some(Commands::Html { input, output, filter }) => {
+        Some(Commands::Html {
+            input,
+            output,
+            filter,
+        }) => {
             // Read input
             let input = if let Some(input_path) = &input {
                 fs::read_to_string(input_path)?
@@ -81,6 +90,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("{}", full_html);
                 }
             }
+        }
+        Some(Commands::Rex { input }) => {
+            // Read RexPaint data
+            let data = if let Some(input_path) = &input {
+                fs::read(input_path)?
+            } else {
+                let mut buffer = Vec::new();
+                io::stdin().read_to_end(&mut buffer)?;
+                buffer
+            };
+            let ansi = rexpaint_to_ansi(&data)?;
+            print!("{}", ansi);
         }
         Some(Commands::Css) => {
             let css = generate_css();

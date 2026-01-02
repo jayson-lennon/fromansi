@@ -1,4 +1,6 @@
+use codepage_437::CP437_WINGDINGS;
 use regex::Regex;
+use rexpaint::XpFile;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 
@@ -17,8 +19,9 @@ impl Color {
             Color::Indexed(idx) => {
                 if *idx < 16 {
                     let standard_colors = [
-                        "#000000", "#800000", "#008000", "#808000", "#000080", "#800080", "#008080", "#c0c0c0",
-                        "#808080", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff",
+                        "#000000", "#800000", "#008000", "#808000", "#000080", "#800080",
+                        "#008080", "#c0c0c0", "#808080", "#ff0000", "#00ff00", "#ffff00",
+                        "#0000ff", "#ff00ff", "#00ffff", "#ffffff",
                     ];
                     standard_colors[*idx as usize].to_string()
                 } else if *idx < 232 {
@@ -91,20 +94,23 @@ impl StyledText {
                 }
                 if i < parts.len() - 1 {
                     // end of line
-                    lines.push(StyledText { segments: current_line });
+                    lines.push(StyledText {
+                        segments: current_line,
+                    });
                     current_line = Vec::new();
                 }
             }
         }
         if !current_line.is_empty() {
-            lines.push(StyledText { segments: current_line });
+            lines.push(StyledText {
+                segments: current_line,
+            });
         }
         lines
     }
 }
 
 pub type ParsedData = StyledText;
-
 
 static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").unwrap());
 
@@ -236,6 +242,39 @@ pub fn parse_ansi(input: &str) -> ParsedData {
     StyledText { segments }
 }
 
+pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+    use std::io::Cursor;
+    let mut f = Cursor::new(data);
+    let xp = XpFile::read(&mut f)?;
+    let mut output = String::new();
+
+    for layer in &xp.layers {
+        for y in 0..layer.height {
+            for x in 0..layer.width {
+                let cell = layer.get(x, y).unwrap();
+                let ch = if cell.ch != 0 {
+                    CP437_WINGDINGS.decode(cell.ch as u8)
+                } else {
+                    ' '
+                };
+                if cell.bg.is_transparent() {
+                    output.push_str(&format!(
+                        "\x1b[38;2;{};{};{}m{}\x1b[0m",
+                        cell.fg.r, cell.fg.g, cell.fg.b, ch
+                    ));
+                } else {
+                    output.push_str(&format!(
+                        "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m",
+                        cell.fg.r, cell.fg.g, cell.fg.b, cell.bg.r, cell.bg.g, cell.bg.b, ch
+                    ));
+                }
+            }
+            output.push('\n');
+        }
+    }
+    Ok(output)
+}
+
 pub fn generate_css() -> String {
     let mut css = String::new();
 
@@ -250,7 +289,9 @@ pub fn generate_css() -> String {
     css.push_str(".dim { opacity: 0.5; }\n");
     css.push_str(".blink { animation: blink 1s infinite; }\n");
     css.push_str("@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }\n");
-    css.push_str(".reverse { /* Note: reverse is handled by swapping fg/bg in HTML generation */ }\n");
+    css.push_str(
+        ".reverse { /* Note: reverse is handled by swapping fg/bg in HTML generation */ }\n",
+    );
     css.push_str(".hidden { visibility: hidden; }\n\n");
 
     // Standard 16 colors
@@ -261,7 +302,10 @@ pub fn generate_css() -> String {
 
     for i in 0..16 {
         css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, standard_colors[i]));
-        css.push_str(&format!(".bg{} {{ background-color: {}; }}\n", i, standard_colors[i]));
+        css.push_str(&format!(
+            ".bg{} {{ background-color: {}; }}\n",
+            i, standard_colors[i]
+        ));
     }
     css.push('\n');
 
