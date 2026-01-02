@@ -15,10 +15,18 @@ fromansi parses terminal input. It supports:
 
 ## Installation
 
+Arch Linux:
+
+```bash
+git clone https://github.com/jayson-lennon/fromansi.git
+cd fromansi
+makepkg -si
+```
+
 Build from source:
 
 ```bash
-git clone <repo>
+git clone https://github.com/jayson-lennon/fromansi.git
 cd fromansi
 cargo build --release
 ```
@@ -67,4 +75,4 @@ fromansi css > styles.css
 
 ## License
 
-GPLv3
+[GPLv3](LICENSE)
