@@ -1,5 +1,5 @@
 use clap::Parser;
-use fromansi::OutputType;
+use fromansi::{OutputType, parse_ansi};
 use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -31,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse output type
     let output_type = match args.output.as_str() {
         "terminal" => OutputType::Terminal,
+        "html" => OutputType::Html,
         _ => return Err(format!("Unknown output type: {}", args.output).into()),
     };
 
@@ -38,6 +39,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match output_type {
         OutputType::Terminal => {
             print!("{}", input);
+        }
+        OutputType::Html => {
+            let parsed = parse_ansi(&input);
+            println!("{}", parsed.to_html());
         }
     }
 
