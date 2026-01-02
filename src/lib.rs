@@ -35,6 +35,16 @@ impl Color {
             }
         }
     }
+
+    pub fn to_indexed_if_possible(&self) -> Option<u8> {
+        let hex = self.to_hex();
+        for i in 0..=255 {
+            if Color::Indexed(i).to_hex() == hex {
+                return Some(i);
+            }
+        }
+        None
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]

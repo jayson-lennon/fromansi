@@ -60,19 +60,27 @@ impl StyledText {
             };
 
             if let Some(color) = fg_color {
-                match color {
-                    Color::Indexed(idx) => classes.push(format!("fg-{}", idx)),
-                    Color::Rgb(r, g, b) => {
-                        inline_styles.push(format!("color: rgb({}, {}, {})", r, g, b))
+                if let Some(idx) = color.to_indexed_if_possible() {
+                    classes.push(format!("fg-{}", idx));
+                } else {
+                    match color {
+                        Color::Indexed(_) => unreachable!(), // since to_indexed_if_possible would return Some
+                        Color::Rgb(r, g, b) => {
+                            inline_styles.push(format!("color: rgb({}, {}, {})", r, g, b))
+                        }
                     }
                 }
             }
 
             if let Some(color) = bg_color {
-                match color {
-                    Color::Indexed(idx) => classes.push(format!("bg-{}", idx)),
-                    Color::Rgb(r, g, b) => {
-                        inline_styles.push(format!("background-color: rgb({}, {}, {})", r, g, b))
+                if let Some(idx) = color.to_indexed_if_possible() {
+                    classes.push(format!("bg-{}", idx));
+                } else {
+                    match color {
+                        Color::Indexed(_) => unreachable!(),
+                        Color::Rgb(r, g, b) => {
+                            inline_styles.push(format!("background-color: rgb({}, {}, {})", r, g, b))
+                        }
                     }
                 }
             }
