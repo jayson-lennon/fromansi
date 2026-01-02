@@ -41,6 +41,11 @@ impl StyledText {
 
 pub type ParsedData = StyledText;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum OutputType {
+    Terminal,
+}
+
 static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").unwrap());
 
 pub fn parse_ansi(input: &str) -> ParsedData {
