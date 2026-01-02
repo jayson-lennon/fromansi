@@ -268,4 +268,78 @@ mod tests {
         let html = styled_text.to_html();
         assert_eq!(html, "<span>Text</span><span>More</span>");
     }
+
+    #[test]
+    fn test_html_multiple_consecutive_spaces() {
+        let styled_text = StyledText {
+            segments: vec![Segment {
+                text: "hello         world".to_string(),
+                style: Style::default(),
+            }],
+        };
+        let html = styled_text.to_html();
+        assert_eq!(html, "<span>hello         world</span>");
+    }
+
+    #[test]
+    fn test_html_multiple_lines() {
+        let styled_text = StyledText {
+            segments: vec![Segment {
+                text: "line1\nline2\nline3".to_string(),
+                style: Style::default(),
+            }],
+        };
+        let html = styled_text.to_html();
+        assert_eq!(html, "<span>line1\nline2\nline3</span>");
+    }
+
+    #[test]
+    fn test_html_large_input_with_spaces_and_newlines() {
+        let styled_text = StyledText {
+            segments: vec![Segment {
+                text: "This is a test\nwith    multiple   spaces\nand\nnewlines".to_string(),
+                style: Style::default(),
+            }],
+        };
+        let html = styled_text.to_html();
+        assert_eq!(html, "<span>This is a test\nwith    multiple   spaces\nand\nnewlines</span>");
+    }
+
+    #[test]
+    fn test_html_multiple_segments_with_spaces_and_styles() {
+        let styled_text = StyledText {
+            segments: vec![
+                Segment {
+                    text: "Normal text   with spaces".to_string(),
+                    style: Style::default(),
+                },
+                Segment {
+                    text: "Bold    text".to_string(),
+                    style: Style {
+                        bold: true,
+                        ..Default::default()
+                    },
+                },
+                Segment {
+                    text: "\nRed     text".to_string(),
+                    style: Style {
+                        fg_color: Some(Color::Indexed(1)),
+                        ..Default::default()
+                    },
+                },
+                Segment {
+                    text: "   Underlined".to_string(),
+                    style: Style {
+                        underline: true,
+                        ..Default::default()
+                    },
+                },
+            ],
+        };
+        let html = styled_text.to_html();
+        assert_eq!(
+            html,
+            "<span>Normal text   with spaces</span><span class=\"bold\">Bold    text</span><span class=\"fg-1\">\nRed     text</span><span class=\"underline\">   Underlined</span>"
+        );
+    }
 }
