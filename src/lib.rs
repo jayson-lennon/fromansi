@@ -1,9 +1,11 @@
 use codepage_437::CP437_WINGDINGS;
+use error_stack::{Report, ResultExt};
 use regex::Regex;
 use rexpaint::XpFile;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::sync::LazyLock;
+use wherror::Error;
 
 mod renderers;
 
@@ -217,16 +219,20 @@ pub fn parse_ansi(input: &str) -> ParsedData {
                 28 => current_style.hidden = false,
                 29 => current_style.strikethrough = false,
                 30..=37 => {
-                    current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 30).unwrap()))
+                    current_style.fg_color =
+                        Some(Color::Indexed(u8::try_from(param - 30).unwrap()));
                 }
                 40..=47 => {
-                    current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 40).unwrap()))
+                    current_style.bg_color =
+                        Some(Color::Indexed(u8::try_from(param - 40).unwrap()));
                 }
                 90..=97 => {
-                    current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 82).unwrap()))
+                    current_style.fg_color =
+                        Some(Color::Indexed(u8::try_from(param - 82).unwrap()));
                 } // bright
                 100..=107 => {
-                    current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 92).unwrap()))
+                    current_style.bg_color =
+                        Some(Color::Indexed(u8::try_from(param - 92).unwrap()));
                 } // bright
                 38 => {
                     // Extended foreground color
@@ -306,6 +312,10 @@ pub fn parse_ansi(input: &str) -> ParsedData {
     StyledText { segments }
 }
 
+#[derive(Debug, Error)]
+#[error(debug)]
+pub struct RexPaintError;
+
 /// Converts `RexPaint` file data to ANSI text.
 ///
 /// # Errors
@@ -315,10 +325,12 @@ pub fn parse_ansi(input: &str) -> ParsedData {
 /// # Panics
 ///
 /// Panics if accessing a cell in the layer fails (invalid dimensions).
-pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Report<RexPaintError>> {
     use std::io::Cursor;
     let mut f = Cursor::new(data);
-    let xp = XpFile::read(&mut f)?;
+    let xp = XpFile::read(&mut f)
+        .change_context(RexPaintError)
+        .attach("failed to read data into virtual XpFile")?;
     let mut output = String::new();
 
     for layer in &xp.layers {

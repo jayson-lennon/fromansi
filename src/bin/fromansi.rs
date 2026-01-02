@@ -1,8 +1,11 @@
 use clap::{Parser, Subcommand, ValueEnum};
+use error_stack::fmt::ColorMode;
+use error_stack::{Report, ResultExt};
 use fromansi::{generate_css, parse_ansi, rexpaint_to_ansi};
 use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
+use wherror::Error;
 
 #[derive(Parser)]
 #[command(name = "fromansi")]
@@ -44,19 +47,30 @@ enum HtmlOutputType {
     Fragment,
     Standalone,
 }
+#[derive(Debug, Error)]
+#[error(debug)]
+pub struct AppError;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Report<AppError>> {
     let args = Args::parse();
+    Report::set_color_mode(ColorMode::Color);
 
     // Handle output
     match args.command {
         None => {
             // Read input
             let input = if let Some(input_path) = &args.input {
-                fs::read_to_string(input_path)?
+                fs::read_to_string(input_path)
+                    .change_context(AppError)
+                    .attach_with(|| {
+                        format!("failed to read input file '{}'", input_path.display())
+                    })?
             } else {
                 let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer)?;
+                io::stdin()
+                    .read_to_string(&mut buffer)
+                    .change_context(AppError)
+                    .attach("failed to read stdin")?;
                 buffer
             };
             // Terminal output
@@ -69,10 +83,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }) => {
             // Read input
             let input = if let Some(input_path) = &input {
-                fs::read_to_string(input_path)?
+                fs::read_to_string(input_path)
+                    .change_context(AppError)
+                    .attach_with(|| {
+                        format!("failed to read input file '{}'", input_path.display())
+                    })?
             } else {
                 let mut buffer = String::new();
-                io::stdin().read_to_string(&mut buffer)?;
+                io::stdin()
+                    .read_to_string(&mut buffer)
+                    .change_context(AppError)
+                    .attach("failed to read stdin")?;
                 buffer
             };
             let parsed = parse_ansi(&input);
@@ -93,13 +114,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(Commands::Rex { input }) => {
             // Read RexPaint data
             let data = if let Some(input_path) = &input {
-                fs::read(input_path)?
+                fs::read(input_path)
+                    .change_context(AppError)
+                    .attach_with(|| {
+                        format!("failed to read input file '{}'", input_path.display())
+                    })?
             } else {
                 let mut buffer = Vec::new();
-                io::stdin().read_to_end(&mut buffer)?;
+                io::stdin()
+                    .read_to_end(&mut buffer)
+                    .change_context(AppError)
+                    .attach("failed to read stdin")?;
                 buffer
             };
-            let ansi = rexpaint_to_ansi(&data)?;
+            let ansi = rexpaint_to_ansi(&data)
+                .change_context(AppError)
+                .attach("RexPaint conversion failed")?;
             print!("{ansi}");
         }
         Some(Commands::Css) => {
