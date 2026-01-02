@@ -7,6 +7,9 @@ edition = "2024"
 path = "src/lib.rs"
 name = "fromansi"
 
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+
 [dependencies]
 bon = "3.8.1"
 clap = { version = "4.5.51", features = ["derive", "env"] }

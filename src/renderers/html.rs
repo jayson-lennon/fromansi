@@ -327,7 +327,7 @@ mod tests {
                     style: Style::default(),
                 },
                 Segment {
-                    text: "".to_string(),
+                    text: String::new(),
                     style: Style {
                         bold: true,
                         ..Default::default()
