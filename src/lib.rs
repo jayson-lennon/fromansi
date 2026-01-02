@@ -11,6 +11,32 @@ pub enum Color {
     Rgb(u8, u8, u8),
 }
 
+impl Color {
+    pub fn to_hex(&self) -> String {
+        match self {
+            Color::Rgb(r, g, b) => format!("#{:02x}{:02x}{:02x}", r, g, b),
+            Color::Indexed(idx) => {
+                if *idx < 16 {
+                    let standard_colors = [
+                        "#000000", "#800000", "#008000", "#808000", "#000080", "#800080", "#008080", "#c0c0c0",
+                        "#808080", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff",
+                    ];
+                    standard_colors[*idx as usize].to_string()
+                } else if *idx < 232 {
+                    let i = *idx as usize - 16;
+                    let r = (i / 36) * 51;
+                    let g = ((i % 36) / 6) * 51;
+                    let b = (i % 6) * 51;
+                    format!("#{:02x}{:02x}{:02x}", r, g, b)
+                } else {
+                    let gray = 8 + (*idx as usize - 232) * 10;
+                    format!("#{:02x}{:02x}{:02x}", gray, gray, gray)
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Style {
     pub fg_color: Option<Color>,
@@ -39,6 +65,32 @@ pub struct StyledText {
 impl StyledText {
     pub fn segments(&self) -> &[Segment] {
         &self.segments
+    }
+
+    pub fn split_lines(&self) -> Vec<StyledText> {
+        let mut lines = Vec::new();
+        let mut current_line = Vec::new();
+
+        for segment in &self.segments {
+            let parts: Vec<&str> = segment.text.split('\n').collect();
+            for (i, part) in parts.iter().enumerate() {
+                if !part.is_empty() {
+                    current_line.push(Segment {
+                        text: part.to_string(),
+                        style: segment.style.clone(),
+                    });
+                }
+                if i < parts.len() - 1 {
+                    // end of line
+                    lines.push(StyledText { segments: current_line });
+                    current_line = Vec::new();
+                }
+            }
+        }
+        if !current_line.is_empty() {
+            lines.push(StyledText { segments: current_line });
+        }
+        lines
     }
 }
 
