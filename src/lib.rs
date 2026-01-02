@@ -2,6 +2,7 @@ use codepage_437::CP437_WINGDINGS;
 use regex::Regex;
 use rexpaint::XpFile;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use std::sync::LazyLock;
 
 mod renderers;
@@ -13,9 +14,10 @@ pub enum Color {
 }
 
 impl Color {
+    #[must_use]
     pub fn to_hex(&self) -> String {
         match self {
-            Color::Rgb(r, g, b) => format!("#{:02x}{:02x}{:02x}", r, g, b),
+            Color::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
             Color::Indexed(idx) => {
                 if *idx < 16 {
                     let standard_colors = [
@@ -29,15 +31,16 @@ impl Color {
                     let r = (i / 36) * 51;
                     let g = ((i % 36) / 6) * 51;
                     let b = (i % 6) * 51;
-                    format!("#{:02x}{:02x}{:02x}", r, g, b)
+                    format!("#{r:02x}{g:02x}{b:02x}")
                 } else {
                     let gray = 8 + (*idx as usize - 232) * 10;
-                    format!("#{:02x}{:02x}{:02x}", gray, gray, gray)
+                    format!("#{gray:02x}{gray:02x}{gray:02x}")
                 }
             }
         }
     }
 
+    #[must_use]
     pub fn to_indexed_if_possible(&self) -> Option<u8> {
         let hex = self.to_hex();
         (0..=255).find(|&i| Color::Indexed(i).to_hex() == hex)
@@ -45,6 +48,7 @@ impl Color {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Style {
     pub fg_color: Option<Color>,
     pub bg_color: Option<Color>,
@@ -70,10 +74,12 @@ pub struct StyledText {
 }
 
 impl StyledText {
+    #[must_use]
     pub fn segments(&self) -> &[Segment] {
         &self.segments
     }
 
+    #[must_use]
     pub fn split_lines(&self) -> Vec<StyledText> {
         let mut lines = Vec::new();
         let mut current_line = Vec::new();
@@ -83,7 +89,7 @@ impl StyledText {
             for (i, part) in parts.iter().enumerate() {
                 if !part.is_empty() {
                     current_line.push(Segment {
-                        text: part.to_string(),
+                        text: (*part).to_string(),
                         style: segment.style.clone(),
                     });
                 }
@@ -109,7 +115,13 @@ pub type ParsedData = StyledText;
 
 static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").unwrap());
 
-pub fn parse_ansi(input: &str) -> ParsedData {
+    /// Parses ANSI escape sequences from the input string into styled text.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the regex capture fails unexpectedly.
+    #[allow(clippy::too_many_lines)]
+    pub fn parse_ansi(input: &str) -> ParsedData {
     let mut segments = Vec::new();
     let mut current_style = Style::default();
     let mut last_end = 0;
@@ -157,10 +169,10 @@ pub fn parse_ansi(input: &str) -> ParsedData {
                 27 => current_style.reverse = false,
                 28 => current_style.hidden = false,
                 29 => current_style.strikethrough = false,
-                30..=37 => current_style.fg_color = Some(Color::Indexed((param - 30) as u8)),
-                40..=47 => current_style.bg_color = Some(Color::Indexed((param - 40) as u8)),
-                90..=97 => current_style.fg_color = Some(Color::Indexed((param - 82) as u8)), // bright
-                100..=107 => current_style.bg_color = Some(Color::Indexed((param - 92) as u8)), // bright
+                30..=37 => current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 30).unwrap())),
+                40..=47 => current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 40).unwrap())),
+                90..=97 => current_style.fg_color = Some(Color::Indexed(u8::try_from(param - 82).unwrap())), // bright
+                100..=107 => current_style.bg_color = Some(Color::Indexed(u8::try_from(param - 92).unwrap())), // bright
                 38 => {
                     // Extended foreground color
                     i += 1;
@@ -174,7 +186,7 @@ pub fn parse_ansi(input: &str) -> ParsedData {
                         if i >= params.len() {
                             break;
                         }
-                        current_style.fg_color = Some(Color::Indexed(params[i] as u8));
+                        current_style.fg_color = Some(Color::Indexed(u8::try_from(params[i]).unwrap()));
                     } else if sub == 2 {
                         // Truecolor
                         i += 1;
@@ -182,9 +194,9 @@ pub fn parse_ansi(input: &str) -> ParsedData {
                             break;
                         }
                         current_style.fg_color = Some(Color::Rgb(
-                            params[i] as u8,
-                            params[i + 1] as u8,
-                            params[i + 2] as u8,
+                            u8::try_from(params[i]).unwrap(),
+                            u8::try_from(params[i + 1]).unwrap(),
+                            u8::try_from(params[i + 2]).unwrap(),
                         ));
                         i += 2;
                     }
@@ -202,7 +214,7 @@ pub fn parse_ansi(input: &str) -> ParsedData {
                         if i >= params.len() {
                             break;
                         }
-                        current_style.bg_color = Some(Color::Indexed(params[i] as u8));
+                        current_style.bg_color = Some(Color::Indexed(u8::try_from(params[i]).unwrap()));
                     } else if sub == 2 {
                         // Truecolor
                         i += 1;
@@ -210,9 +222,9 @@ pub fn parse_ansi(input: &str) -> ParsedData {
                             break;
                         }
                         current_style.bg_color = Some(Color::Rgb(
-                            params[i] as u8,
-                            params[i + 1] as u8,
-                            params[i + 2] as u8,
+                            u8::try_from(params[i]).unwrap(),
+                            u8::try_from(params[i + 1]).unwrap(),
+                            u8::try_from(params[i + 2]).unwrap(),
                         ));
                         i += 2;
                     }
@@ -237,7 +249,16 @@ pub fn parse_ansi(input: &str) -> ParsedData {
     StyledText { segments }
 }
 
-pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+    /// Converts `RexPaint` file data to ANSI text.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `RexPaint` data is invalid or cannot be read.
+    ///
+    /// # Panics
+    ///
+    /// Panics if accessing a cell in the layer fails (invalid dimensions).
+    pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
     use std::io::Cursor;
     let mut f = Cursor::new(data);
     let xp = XpFile::read(&mut f)?;
@@ -248,20 +269,14 @@ pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error
             for x in 0..layer.width {
                 let cell = layer.get(x, y).unwrap();
                 let ch = if cell.ch != 0 {
-                    CP437_WINGDINGS.decode(cell.ch as u8)
+                    CP437_WINGDINGS.decode(u8::try_from(cell.ch).unwrap())
                 } else {
                     ' '
                 };
                 if cell.bg.is_transparent() {
-                    output.push_str(&format!(
-                        "\x1b[38;2;{};{};{}m{}\x1b[0m",
-                        cell.fg.r, cell.fg.g, cell.fg.b, ch
-                    ));
+                    write!(&mut output, "\x1b[38;2;{};{};{}m{}\x1b[0m", cell.fg.r, cell.fg.g, cell.fg.b, ch).unwrap();
                 } else {
-                    output.push_str(&format!(
-                        "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m",
-                        cell.fg.r, cell.fg.g, cell.fg.b, cell.bg.r, cell.bg.g, cell.bg.b, ch
-                    ));
+                    write!(&mut output, "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m", cell.fg.r, cell.fg.g, cell.fg.b, cell.bg.r, cell.bg.g, cell.bg.b, ch).unwrap();
                 }
             }
             output.push('\n');
@@ -270,6 +285,7 @@ pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Box<dyn std::error::Error
     Ok(output)
 }
 
+#[must_use]
 pub fn generate_css() -> String {
     let mut css = String::new();
 
@@ -296,11 +312,8 @@ pub fn generate_css() -> String {
     ];
 
     (0..16).for_each(|i| {
-        css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, standard_colors[i]));
-        css.push_str(&format!(
-            ".bg{} {{ background-color: {}; }}\n",
-            i, standard_colors[i]
-        ));
+        writeln!(&mut css, ".fg{i} {{ color: {} }}", standard_colors[i]).unwrap();
+        writeln!(&mut css, ".bg{i} {{ background-color: {} }}", standard_colors[i]).unwrap();
     });
     css.push('\n');
 
@@ -309,18 +322,18 @@ pub fn generate_css() -> String {
         let r = ((i - 16) / 36) * 51;
         let g = (((i - 16) % 36) / 6) * 51;
         let b = ((i - 16) % 6) * 51;
-        let hex = format!("#{:02x}{:02x}{:02x}", r, g, b);
-        css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, hex));
-        css.push_str(&format!(".bg{} {{ background-color: {}; }}\n", i, hex));
+        let hex = format!("#{r:02x}{g:02x}{b:02x}");
+        writeln!(&mut css, ".fg{i} {{ color: {hex} }}").unwrap();
+        writeln!(&mut css, ".bg{i} {{ background-color: {hex} }}").unwrap();
     }
     css.push('\n');
 
     // Grayscale 232-255
     for i in 232..256 {
         let gray = 8 + (i - 232) * 10;
-        let hex = format!("#{:02x}{:02x}{:02x}", gray, gray, gray);
-        css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, hex));
-        css.push_str(&format!(".bg{} {{ background-color: {}; }}\n", i, hex));
+        let hex = format!("#{gray:02x}{gray:02x}{gray:02x}");
+        writeln!(&mut css, ".fg{i} {{ color: {hex} }}").unwrap();
+        writeln!(&mut css, ".bg{i} {{ background-color: {hex} }}").unwrap();
     }
 
     css

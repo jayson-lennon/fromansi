@@ -30,7 +30,7 @@ enum Commands {
         #[arg(long)]
         filter: Option<String>,
     },
-    /// Convert RexPaint file to ANSI text
+    /// Convert `RexPaint` file to ANSI text
     Rex {
         /// Input file (reads from stdin if not provided)
         input: Option<PathBuf>,
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 buffer
             };
             // Terminal output
-            print!("{}", input);
+            print!("{input}");
         }
         Some(Commands::Html {
             input,
@@ -79,15 +79,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let html = parsed.to_html_with_filter(filter.as_deref());
             match output {
                 HtmlOutputType::Fragment => {
-                    println!("{}", html);
+                    println!("{html}");
                 }
                 HtmlOutputType::Standalone => {
                     let css = generate_css();
                     let full_html = format!(
-                        "<!DOCTYPE html><html><head><style>{}</style></head><body>{}</body></html>",
-                        css, html
+                        "<!DOCTYPE html><html><head><style>{css}</style></head><body>{html}</body></html>"
                     );
-                    println!("{}", full_html);
+                    println!("{full_html}");
                 }
             }
         }
@@ -101,11 +100,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 buffer
             };
             let ansi = rexpaint_to_ansi(&data)?;
-            print!("{}", ansi);
+            print!("{ansi}");
         }
         Some(Commands::Css) => {
             let css = generate_css();
-            println!("{}", css);
+            println!("{css}");
             // No debug for CSS since no input parsed
         }
     }

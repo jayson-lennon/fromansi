@@ -1,10 +1,18 @@
 use crate::{Color, StyledText};
+use std::fmt::Write;
 
 impl StyledText {
+    #[must_use]
     pub fn to_html(&self) -> String {
         self.to_html_with_filter(None)
     }
 
+    /// Converts the styled text to HTML format with optional filtering.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the regex for filtering fails to compile.
+    #[must_use]
     pub fn to_html_with_filter(&self, filter_hex: Option<&str>) -> String {
         if filter_hex.is_none() {
             // No filter, use original logic
@@ -33,7 +41,7 @@ impl StyledText {
                 result.pop();
             }
 
-            format!("<pre>{}</pre>", result)
+            format!("<pre>{result}</pre>")
         }
     }
 
@@ -62,12 +70,12 @@ impl StyledText {
 
             if let Some(color) = fg_color {
                 if let Some(idx) = color.to_indexed_if_possible() {
-                    classes.push(format!("fg{}", idx));
+                    classes.push(format!("fg{idx}"));
                 } else {
                     match color {
                         Color::Indexed(_) => unreachable!(), // since to_indexed_if_possible would return Some
                         Color::Rgb(r, g, b) => {
-                            inline_styles.push(format!("color: rgb({}, {}, {})", r, g, b))
+                            inline_styles.push(format!("color: rgb({r}, {g}, {b})"));
                         }
                     }
                 }
@@ -75,12 +83,13 @@ impl StyledText {
 
             if let Some(color) = bg_color {
                 if let Some(idx) = color.to_indexed_if_possible() {
-                    classes.push(format!("bg{}", idx));
+                    classes.push(format!("bg{idx}"));
                 } else {
                     match color {
                         Color::Indexed(_) => unreachable!(),
-                        Color::Rgb(r, g, b) => inline_styles
-                            .push(format!("background-color: rgb({}, {}, {})", r, g, b)),
+                        Color::Rgb(r, g, b) => {
+                            inline_styles.push(format!("background-color: rgb({r}, {g}, {b})"));
+                        }
                     }
                 }
             }
@@ -109,7 +118,7 @@ impl StyledText {
             }
 
             // Check if segment should be filtered
-            let fg_hex = fg_color.map(|c| c.to_hex());
+            let fg_hex = fg_color.map(Color::to_hex);
             let is_filtered = match (fg_hex, filter_hex) {
                 (Some(fh), Some(filt)) if fh == filt && segment.text.chars().all(|c| c == ' ') => {
                     true
@@ -143,10 +152,7 @@ impl StyledText {
                 segment.text.clone()
             };
 
-            html.push_str(&format!(
-                "<span{}{}>{}</span>",
-                class_attr, style_attr, text
-            ));
+            write!(&mut html, "<span{class_attr}{style_attr}>{text}</span>").unwrap();
         }
         html
     }
