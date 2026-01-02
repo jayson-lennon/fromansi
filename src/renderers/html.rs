@@ -15,12 +15,12 @@ impl StyledText {
 
             let lines = self.split_lines();
             let mut result = String::new();
+            let re = Regex::new(r"(<span[^>]*>(&nbsp;)+</span>\s*)+$").unwrap();
 
             for line in lines {
                 let mut line_html = line.generate_html_spans(filter_hex);
 
                 // Trim trailing spans containing only &nbsp;
-                let re = Regex::new(r"(<span[^>]*>(&nbsp;)+</span>\s*)+$").unwrap();
                 line_html = re.replace_all(&line_html, "").to_string();
 
                 if !line_html.is_empty() {
