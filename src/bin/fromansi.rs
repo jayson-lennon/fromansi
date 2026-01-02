@@ -11,10 +11,6 @@ struct Args {
     /// Input file (reads from stdin if not provided) - for terminal output
     input: Option<PathBuf>,
 
-    /// Enable debug mode. Outputs the generated data structure.
-    #[arg(long)]
-    debug: bool,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -60,10 +56,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             // Terminal output
             print!("{}", input);
-            if args.debug {
-                let parsed = parse_ansi(&input);
-                println!("{parsed:#?}")
-            }
         }
         Some(Commands::Html { input, output, filter }) => {
             // Read input
@@ -88,9 +80,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                     println!("{}", full_html);
                 }
-            }
-            if args.debug {
-                println!("{parsed:#?}")
             }
         }
         Some(Commands::Css) => {
