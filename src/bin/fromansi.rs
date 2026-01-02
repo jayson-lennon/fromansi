@@ -1,5 +1,5 @@
-use clap::Parser;
-use fromansi::{OutputType, parse_ansi};
+use clap::{Parser, Subcommand, ValueEnum};
+use fromansi::{parse_ansi, generate_css};
 use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -8,60 +8,96 @@ use std::path::PathBuf;
 #[command(name = "fromansi")]
 #[command(about = "Parse ANSI escape sequences")]
 struct Args {
-    /// Input file (reads from stdin if not provided)
+    /// Input file (reads from stdin if not provided) - for terminal output
     input: Option<PathBuf>,
 
     /// Enable debug mode. Outputs the generated data structure.
     #[arg(long)]
     debug: bool,
 
-    /// Output type
-    #[arg(short, long, default_value = "terminal")]
-    output: OutputType,
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
 
-    /// Filter out cells of a specific color (hex format, e.g., #000000)
-    #[arg(long)]
-    filter: Option<String>,
+#[derive(Subcommand)]
+enum Commands {
+    /// Generate HTML output
+    Html {
+        /// Input file (reads from stdin if not provided)
+        input: Option<PathBuf>,
+
+        /// Output type
+        #[arg(short, long, default_value = "fragment")]
+        output: HtmlOutputType,
+
+        /// Filter out cells of a specific color (hex format, e.g., #000000)
+        #[arg(long)]
+        filter: Option<String>,
+    },
+    /// Generate CSS styles
+    Css,
+}
+
+#[derive(Clone, ValueEnum)]
+enum HtmlOutputType {
+    Fragment,
+    Standalone,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // Read input
-    let input = if let Some(input_path) = &args.input {
-        fs::read_to_string(input_path)?
-    } else {
-        let mut buffer = String::new();
-        io::stdin().read_to_string(&mut buffer)?;
-        buffer
-    };
-
-    let output_type = args.output;
-
     // Handle output
-    match output_type {
-        OutputType::Terminal => {
+    match args.command {
+        None => {
+            // Read input
+            let input = if let Some(input_path) = &args.input {
+                fs::read_to_string(input_path)?
+            } else {
+                let mut buffer = String::new();
+                io::stdin().read_to_string(&mut buffer)?;
+                buffer
+            };
+            // Terminal output
             print!("{}", input);
+            if args.debug {
+                let parsed = parse_ansi(&input);
+                println!("{parsed:#?}")
+            }
         }
-        OutputType::HtmlFragment => {
+        Some(Commands::Html { input, output, filter }) => {
+            // Read input
+            let input = if let Some(input_path) = &input {
+                fs::read_to_string(input_path)?
+            } else {
+                let mut buffer = String::new();
+                io::stdin().read_to_string(&mut buffer)?;
+                buffer
+            };
             let parsed = parse_ansi(&input);
-            let html = parsed.to_html_with_filter(args.filter.as_deref());
-            println!("{}", html);
+            let html = parsed.to_html_with_filter(filter.as_deref());
+            match output {
+                HtmlOutputType::Fragment => {
+                    println!("{}", html);
+                }
+                HtmlOutputType::Standalone => {
+                    let css = generate_css();
+                    let full_html = format!(
+                        "<!DOCTYPE html><html><head><style>{}</style></head><body>{}</body></html>",
+                        css, html
+                    );
+                    println!("{}", full_html);
+                }
+            }
+            if args.debug {
+                println!("{parsed:#?}")
+            }
         }
-        OutputType::HtmlStandalone => {
-            let parsed = parse_ansi(&input);
-            let html = parsed.to_html_with_filter(args.filter.as_deref());
-            let css = fs::read_to_string("static/styles.css")?;
-            let full_html = format!(
-                "<!DOCTYPE html><html><head><style>{}</style></head><body>{}</body></html>",
-                css, html
-            );
-            println!("{}", full_html);
+        Some(Commands::Css) => {
+            let css = generate_css();
+            println!("{}", css);
+            // No debug for CSS since no input parsed
         }
-    }
-    if args.debug {
-        let parsed = parse_ansi(&input);
-        println!("{parsed:#?}")
     }
 
     Ok(())

@@ -1,4 +1,3 @@
-use clap::ValueEnum;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
@@ -106,16 +105,6 @@ impl StyledText {
 
 pub type ParsedData = StyledText;
 
-/// The rendered output type.
-#[derive(Debug, Clone, PartialEq, derive_more::FromStr, ValueEnum)]
-pub enum OutputType {
-    /// Output back to the terminal.
-    Terminal,
-    /// Output a <pre> HTML block
-    HtmlFragment,
-    /// Output a standalone HTML page
-    HtmlStandalone,
-}
 
 static ANSI_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\x1b\[([0-9;]*)m").unwrap());
 
@@ -245,6 +234,57 @@ pub fn parse_ansi(input: &str) -> ParsedData {
     }
 
     StyledText { segments }
+}
+
+pub fn generate_css() -> String {
+    let mut css = String::new();
+
+    // Header comment
+    css.push_str("/* ANSI Color Styles for fromansi HTML output */\n\n");
+
+    // Text styles
+    css.push_str(".bold { font-weight: bold; }\n");
+    css.push_str(".italic { font-style: italic; }\n");
+    css.push_str(".underline { text-decoration: underline; }\n");
+    css.push_str(".strikethrough { text-decoration: line-through; }\n");
+    css.push_str(".dim { opacity: 0.5; }\n");
+    css.push_str(".blink { animation: blink 1s infinite; }\n");
+    css.push_str("@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }\n");
+    css.push_str(".reverse { /* Note: reverse is handled by swapping fg/bg in HTML generation */ }\n");
+    css.push_str(".hidden { visibility: hidden; }\n\n");
+
+    // Standard 16 colors
+    let standard_colors = [
+        "#000000", "#800000", "#008000", "#808000", "#000080", "#800080", "#008080", "#c0c0c0",
+        "#808080", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff",
+    ];
+
+    for i in 0..16 {
+        css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, standard_colors[i]));
+        css.push_str(&format!(".bg{} {{ background-color: {}; }}\n", i, standard_colors[i]));
+    }
+    css.push('\n');
+
+    // Color cube 16-231
+    for i in 16..232 {
+        let r = ((i - 16) / 36) * 51;
+        let g = (((i - 16) % 36) / 6) * 51;
+        let b = ((i - 16) % 6) * 51;
+        let hex = format!("#{:02x}{:02x}{:02x}", r, g, b);
+        css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, hex));
+        css.push_str(&format!(".bg{} {{ background-color: {}; }}\n", i, hex));
+    }
+    css.push('\n');
+
+    // Grayscale 232-255
+    for i in 232..256 {
+        let gray = 8 + (i - 232) * 10;
+        let hex = format!("#{:02x}{:02x}{:02x}", gray, gray, gray);
+        css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, hex));
+        css.push_str(&format!(".bg{} {{ background-color: {}; }}\n", i, hex));
+    }
+
+    css
 }
 
 #[cfg(test)]
