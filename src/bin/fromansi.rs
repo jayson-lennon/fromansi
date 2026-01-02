@@ -13,7 +13,7 @@ struct Args {
 
     /// Output type
     #[arg(short, long, default_value = "terminal")]
-    output: String,
+    output: OutputType,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,12 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         buffer
     };
 
-    // Parse output type
-    let output_type = match args.output.as_str() {
-        "terminal" => OutputType::Terminal,
-        "html" => OutputType::Html,
-        _ => return Err(format!("Unknown output type: {}", args.output).into()),
-    };
+    let output_type = args.output;
 
     // Handle output
     match output_type {
