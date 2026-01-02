@@ -37,6 +37,7 @@ impl StyledText {
         }
     }
 
+    #[allow(clippy::match_like_matches_macro)]
     fn generate_html_spans(&self, filter_hex: Option<&str>) -> String {
         let mut html = String::new();
         for segment in &self.segments {
@@ -78,9 +79,8 @@ impl StyledText {
                 } else {
                     match color {
                         Color::Indexed(_) => unreachable!(),
-                        Color::Rgb(r, g, b) => {
-                            inline_styles.push(format!("background-color: rgb({}, {}, {})", r, g, b))
-                        }
+                        Color::Rgb(r, g, b) => inline_styles
+                            .push(format!("background-color: rgb({}, {}, {})", r, g, b)),
                     }
                 }
             }
@@ -111,7 +111,9 @@ impl StyledText {
             // Check if segment should be filtered
             let fg_hex = fg_color.map(|c| c.to_hex());
             let is_filtered = match (fg_hex, filter_hex) {
-                (Some(fh), Some(filt)) if fh == filt && segment.text.chars().all(|c| c == ' ') => true,
+                (Some(fh), Some(filt)) if fh == filt && segment.text.chars().all(|c| c == ' ') => {
+                    true
+                }
                 _ => false,
             };
 

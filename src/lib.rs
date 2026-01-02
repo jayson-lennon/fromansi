@@ -40,12 +40,7 @@ impl Color {
 
     pub fn to_indexed_if_possible(&self) -> Option<u8> {
         let hex = self.to_hex();
-        for i in 0..=255 {
-            if Color::Indexed(i).to_hex() == hex {
-                return Some(i);
-            }
-        }
-        None
+        (0..=255).find(|&i| Color::Indexed(i).to_hex() == hex)
     }
 }
 
@@ -300,13 +295,13 @@ pub fn generate_css() -> String {
         "#808080", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff",
     ];
 
-    for i in 0..16 {
+    (0..16).for_each(|i| {
         css.push_str(&format!(".fg{} {{ color: {}; }}\n", i, standard_colors[i]));
         css.push_str(&format!(
             ".bg{} {{ background-color: {}; }}\n",
             i, standard_colors[i]
         ));
-    }
+    });
     css.push('\n');
 
     // Color cube 16-231
@@ -493,7 +488,7 @@ mod tests {
         let hex = "5b1b3833323b303b303b303b206d5b1b6d305b1b3833323b303b383b3b3937313b383834323b303b383b3b3937316d381b20305b1b6d335b3b383b3235323b353b303b303834323b323b3535303b303b206d5b1b6d305b1b3833323b303b303b303b206d5b1b6d305b1b3833323b303b303b303b206d5b1b6d301b0a335b3b383b323b303b306d301b20305b1b6d335b3b383b323b303b306d301b20305b1b6d335b3b383b323b303b306d301b20305b1b6d335b3b383b323b303b306d301b20305b1b6d335b3b383b3230313b323b3030313b323834323b313b3230303b313b3230206d5b1b6d30000a";
         let mut expected_bytes = Vec::new();
         for i in (0..hex.len()).step_by(4) {
-            let word_hex = &hex[i..i+4];
+            let word_hex = &hex[i..i + 4];
             let word = u16::from_str_radix(word_hex, 16).unwrap();
             expected_bytes.push((word & 0xff) as u8);
             expected_bytes.push((word >> 8) as u8);
