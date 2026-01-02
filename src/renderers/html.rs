@@ -83,7 +83,7 @@ impl StyledText {
                 class_attr, style_attr, text
             ));
         }
-        html
+        format!("<pre>{}</pre>", html)
     }
 }
 
@@ -102,7 +102,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span>Hello World</span>");
+        assert_eq!(html, "<pre><span>Hello World</span></pre>");
     }
 
     #[test]
@@ -117,7 +117,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span class=\"fg-1\">Red Text</span>");
+        assert_eq!(html, "<pre><span class=\"fg-1\">Red Text</span></pre>");
     }
 
     #[test]
@@ -132,7 +132,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span class=\"bg-4\">Blue BG</span>");
+        assert_eq!(html, "<pre><span class=\"bg-4\">Blue BG</span></pre>");
     }
 
     #[test]
@@ -149,7 +149,7 @@ mod tests {
         let html = styled_text.to_html();
         assert_eq!(
             html,
-            "<span style=\"color: rgb(255, 0, 128)\">Custom Color</span>"
+            "<pre><span style=\"color: rgb(255, 0, 128)\">Custom Color</span></pre>"
         );
     }
 
@@ -167,7 +167,7 @@ mod tests {
         let html = styled_text.to_html();
         assert_eq!(
             html,
-            "<span style=\"background-color: rgb(128, 255, 0)\">Custom BG</span>"
+            "<pre><span style=\"background-color: rgb(128, 255, 0)\">Custom BG</span></pre>"
         );
     }
 
@@ -183,7 +183,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span class=\"bold\">Bold Text</span>");
+        assert_eq!(html, "<pre><span class=\"bold\">Bold Text</span></pre>");
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod tests {
         let html = styled_text.to_html();
         assert_eq!(
             html,
-            "<span class=\"bold italic underline\">Styled Text</span>"
+            "<pre><span class=\"bold italic underline\">Styled Text</span></pre>"
         );
     }
 
@@ -220,7 +220,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span class=\"fg-7 bg-1\">Reversed</span>");
+        assert_eq!(html, "<pre><span class=\"fg-7 bg-1\">Reversed</span></pre>");
     }
 
     #[test]
@@ -241,7 +241,7 @@ mod tests {
             ],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span>Normal</span><span class=\"bold\">Bold</span>");
+        assert_eq!(html, "<pre><span>Normal</span><span class=\"bold\">Bold</span></pre>");
     }
 
     #[test]
@@ -266,7 +266,7 @@ mod tests {
             ],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span>Text</span><span>More</span>");
+        assert_eq!(html, "<pre><span>Text</span><span>More</span></pre>");
     }
 
     #[test]
@@ -278,7 +278,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span>hello         world</span>");
+        assert_eq!(html, "<pre><span>hello         world</span></pre>");
     }
 
     #[test]
@@ -290,7 +290,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span>line1\nline2\nline3</span>");
+        assert_eq!(html, "<pre><span>line1\nline2\nline3</span></pre>");
     }
 
     #[test]
@@ -302,7 +302,7 @@ mod tests {
             }],
         };
         let html = styled_text.to_html();
-        assert_eq!(html, "<span>This is a test\nwith    multiple   spaces\nand\nnewlines</span>");
+        assert_eq!(html, "<pre><span>This is a test\nwith    multiple   spaces\nand\nnewlines</span></pre>");
     }
 
     #[test]
@@ -339,7 +339,7 @@ mod tests {
         let html = styled_text.to_html();
         assert_eq!(
             html,
-            "<span>Normal text   with spaces</span><span class=\"bold\">Bold    text</span><span class=\"fg-1\">\nRed     text</span><span class=\"underline\">   Underlined</span>"
+            "<pre><span>Normal text   with spaces</span><span class=\"bold\">Bold    text</span><span class=\"fg-1\">\nRed     text</span><span class=\"underline\">   Underlined</span></pre>"
         );
     }
 }
