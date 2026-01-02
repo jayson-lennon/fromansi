@@ -483,4 +483,26 @@ mod tests {
         };
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn test_rexpaint_to_ansi_conversion() {
+        let xp_data = include_bytes!("test-dedup.xp");
+        let ansi = rexpaint_to_ansi(xp_data).unwrap();
+        let actual_bytes = ansi.as_bytes();
+
+        let hex = "5b1b3833323b303b303b303b206d5b1b6d305b1b3833323b303b383b3b3937313b383834323b303b383b3b3937316d381b20305b1b6d335b3b383b3235323b353b303b303834323b323b3535303b303b206d5b1b6d305b1b3833323b303b303b303b206d5b1b6d305b1b3833323b303b303b303b206d5b1b6d301b0a335b3b383b323b303b306d301b20305b1b6d335b3b383b323b303b306d301b20305b1b6d335b3b383b323b303b306d301b20305b1b6d335b3b383b323b303b306d301b20305b1b6d335b3b383b3230313b323b3030313b323834323b313b3230303b313b3230206d5b1b6d30000a";
+        let mut expected_bytes = Vec::new();
+        for i in (0..hex.len()).step_by(4) {
+            let word_hex = &hex[i..i+4];
+            let word = u16::from_str_radix(word_hex, 16).unwrap();
+            expected_bytes.push((word & 0xff) as u8);
+            expected_bytes.push((word >> 8) as u8);
+        }
+        // Remove trailing null if present
+        if expected_bytes.last() == Some(&0) {
+            expected_bytes.pop();
+        }
+
+        assert_eq!(actual_bytes, expected_bytes.as_slice());
+    }
 }
