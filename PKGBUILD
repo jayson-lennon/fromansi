@@ -1,7 +1,7 @@
 # Maintainer: Jayson Lennon <jayson@jaysonlennon.dev>
 
 pkgname=fromansi
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Terminal command output to HTML converter'
 url='https://github.com/jayson-lennon/fromansi'
