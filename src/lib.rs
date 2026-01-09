@@ -364,6 +364,29 @@ pub fn rexpaint_to_ansi(data: &[u8]) -> Result<String, Report<RexPaintError>> {
     Ok(output)
 }
 
+/// Converts ANSI text to `RexPaint` file data.
+///
+/// # Errors
+///
+/// Returns an error if the `RexPaint` data cannot be written.
+///
+/// # Panics
+///
+/// Panics if writing to the in-memory buffer fails (should not happen in practice).
+pub fn ansi_to_rexpaint(input: &str) -> Result<Vec<u8>, Report<RexPaintError>> {
+    use std::io::Cursor;
+    
+    let parsed = parse_ansi(input);
+    let xp = parsed.to_rexpaint();
+    
+    let mut buffer = Cursor::new(Vec::new());
+    xp.write(&mut buffer)
+        .change_context(RexPaintError)
+        .attach("failed to write XpFile to buffer")?;
+    
+    Ok(buffer.into_inner())
+}
+
 /// Generates CSS styles for HTML output of ANSI-formatted text.
 ///
 /// This function creates CSS rules for all supported ANSI colors and text styles,

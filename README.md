@@ -12,6 +12,7 @@ fromansi parses terminal input. It supports:
 - Text styles: bold, italic, underline, strikethrough, blink, dim, hidden, reverse
 - Output to HTML with CSS styling
 - Conversion from RexPaint files to ANSI text
+- Conversion from ANSI text to RexPaint files
 
 ## Installation
 
@@ -63,6 +64,20 @@ fromansi rex input.xp | fromansi html
 
 # Convert to HTML, piping from stdin
 cat input.xp | fromansi rex | fromansi html
+```
+
+#### Convert ANSI to RexPaint
+
+```bash
+# Convert ANSI text to RexPaint file
+echo -e "\x1b[31mRed Text\x1b[0m" | fromansi to-rex -o output.xp
+
+# From file
+fromansi to-rex input.txt -o output.xp
+
+# Round-trip: ANSI → RexPaint → ANSI
+echo -e "\x1b[32mGreen\x1b[0m" | fromansi to-rex -o temp.xp
+fromansi rex temp.xp
 ```
 
 #### Generate CSS

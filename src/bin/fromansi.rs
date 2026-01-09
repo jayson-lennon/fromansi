@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use error_stack::fmt::ColorMode;
 use error_stack::{Report, ResultExt};
-use fromansi::{generate_css, parse_ansi, rexpaint_to_ansi};
+use fromansi::{ansi_to_rexpaint, generate_css, parse_ansi, rexpaint_to_ansi};
 use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -37,6 +37,15 @@ enum Commands {
     Rex {
         /// Input file (reads from stdin if not provided)
         input: Option<PathBuf>,
+    },
+    /// Convert ANSI text to `RexPaint` file
+    ToRex {
+        /// Input file (reads from stdin if not provided)
+        input: Option<PathBuf>,
+
+        /// Output file path
+        #[arg(short, long)]
+        output: PathBuf,
     },
     /// Generate CSS styles
     Css,
@@ -123,6 +132,15 @@ fn main() -> Result<(), Report<AppError>> {
                 .change_context(AppError)
                 .attach("RexPaint conversion failed")?;
             print!("{ansi}");
+        }
+        Some(Commands::ToRex { input, output }) => {
+            let input_text = read_text_input(input)?;
+            let xp_data = ansi_to_rexpaint(&input_text)
+                .change_context(AppError)
+                .attach("ANSI to RexPaint conversion failed")?;
+            fs::write(&output, xp_data)
+                .change_context(AppError)
+                .attach_with(|| format!("failed to write output file '{}'", output.display()))?;
         }
         Some(Commands::Css) => {
             let css = generate_css();
